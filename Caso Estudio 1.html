@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Interactivo - Caso Airbnb</title>
+    <!-- Bibliotecas para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50; /* Azul oscuro */
+            --secondary-color: #3498db; /* Azul brillante */
+            --background-color: #ecf0f1;
+            --text-color: #34495e;
+            --light-text-color: #fff;
+            --card-bg: #ffffff;
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --growth-color: #27ae60; /* Verde */
+            --warning-color: #f39c12; /* Amarillo */
+            --error-color: #c0392b; /* Rojo */
+            --border-color: #dfe6e9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .simulator-container {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 850px;
+            overflow: hidden;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--light-text-color);
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-family: "Roboto Slab", serif;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 5px 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+        
+        /* Welcome Screen Styles */
+        #welcome-screen {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        #welcome-screen h2 {
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.8em;
+        }
+
+        #user-code-input {
+            width: 100%;
+            max-width: 350px;
+            padding: 12px 20px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            text-align: center;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        #user-code-input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .input-error {
+            border-color: var(--error-color) !important;
+            box-shadow: 0 0 5px rgba(192, 57, 43, 0.5);
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .input-error::placeholder {
+            color: var(--error-color);
+            opacity: 0.8;
+        }
+        
+        /* General Button Styles */
+        .option-btn {
+            background-color: var(--secondary-color);
+            color: var(--light-text-color);
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .option-btn:hover:not(:disabled) {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .option-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #start-btn {
+            background-color: var(--growth-color);
+            font-size: 1.2em;
+        }
+
+        #start-btn:hover {
+            background-color: #229954;
+        }
+
+        /* Simulation View Styles */
+        #case-context {
+            background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+            border-left: 5px solid var(--secondary-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        #case-context h2 {
+            margin-top: 0;
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--secondary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .metrics-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: var(--text-color);
+            font-weight: 500;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: 700;
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            transition: color 0.5s;
+        }
+
+        .progress-bar-container {
+            background-color: var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            height: 12px;
+            margin-top: 8px;
+        }
+
+        .progress-bar {
+            background-color: var(--secondary-color);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease-in-out, background-color 0.5s ease;
+            border-radius: 10px;
+        }
+
+        #scenario-title {
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        #scenario-text {
+             text-align: justify;
+        }
+
+        .options {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        /* Use default .option-btn styling for decision buttons */
+        .options .option-btn {
+            text-align: left;
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            border: 2px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .options .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background-color: #e3f2fd;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .consequence-card {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 5px solid var(--secondary-color);
+            padding: 20px;
+            margin-top: 25px;
+            border-radius: var(--border-radius);
+            animation: fadeIn 0.5s;
+        }
+        
+        .consequence-card h4 {
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+        }
+        
+        #continue-btn {
+            margin-top: 20px;
+            background-color: var(--primary-color);
+        }
+
+        #continue-btn:hover {
+            background-color: #1f2c39;
+        }
+        
+        /* Final Report Styles */
+        #final-report {
+            text-align: center;
+        }
+        
+        #final-report h2 {
+            font-family: "Roboto Slab", serif;
+            color: var(--primary-color);
+            font-size: 2em;
+        }
+
+        #final-report-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 25px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #download-pdf-btn {
+            background-color: var(--primary-color);
+        }
+        #download-pdf-btn:hover {
+            background-color: #1f2c39;
+        }
+
+        #restart-btn {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        #restart-btn:hover {
+             background-color: var(--primary-color);
+             color: var(--light-text-color);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        
+        .hidden { display: none; }
+        
+        /* PDF Report styles */
+        .printable-area { display: none; }
+        #pdf-report { width: 800px; background-color: #fff; padding: 40px; color: #000; }
+        #pdf-report h1, #pdf-report h2, #pdf-report h3 { color: #000; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+        #pdf-report li { border-bottom: 1px dashed #eee; padding: 15px 0; margin-bottom: 10px; list-style-type: none; }
+        #pdf-report strong { color: var(--secondary-color); }
+    </style>
+</head>
+<body>
+    <div class="simulator-container">
+        <header class="header"><h1 id="main-title"></h1><p id="main-subtitle"></p></header>
+        <main class="content">
+            <section id="welcome-screen"><h2 id="welcome-title"></h2><p id="welcome-text"></p><input type="text" id="user-code-input" placeholder="Ingresa tu código de alumno aquí"><button id="start-btn" class="option-btn">Comenzar Simulación</button></section>
+            <div id="main-simulation" class="hidden">
+                <section id="case-context"><h2 id="context-title"></h2><div id="context-description"></div></section>
+                <div id="metrics-bar" class="metrics-bar"></div>
+                <section id="scenario"><h2 id="scenario-title"></h2><p id="scenario-text"></p></section>
+                <section id="decision-points"><div class="options" id="options-container"></div></section>
+                <section id="consequence" class="hidden"><div id="consequence-card" class="consequence-card"></div><button id="continue-btn" class="option-btn hidden">Continuar</button></section>
+                <section id="final-report" class="hidden"><h2 id="final-title"></h2><div id="final-description"></div><div id="final-report-buttons"><button id="download-pdf-btn" class="option-btn">Descargar Reporte en PDF</button><button id="restart-btn" class="option-btn">Rejugar el Escenario Completo</button></div></section>
+            </div>
+        </main>
+    </div>
+    <div id="pdf-report" class="printable-area">
+        <h1 id="pdf-main-title"></h1><p><strong>Código de Alumno:</strong> <span id="pdf-user-code"></span></p><hr><h2 id="pdf-final-title"></h2><div id="pdf-final-description"></div><hr><h3>Métricas Finales</h3><p id="pdf-metrics-container"></p><hr><h3>Registro de Decisiones</h3><ul id="pdf-decision-log" style="list-style-type: none; padding: 0;"></ul>
+    </div>
+    <script>
+    const gameData = {
+        "meta": {
+            "mainTitle": "Simulador de Estrategia Digital",
+            "mainSubtitle": "El Desafío de Construir Confianza",
+            "welcomeTitle": "Bienvenido al Caso Airbnb",
+            "welcomeText": "Asumirás el rol de líder de producto en las primeras etapas de Airbnb. Tus decisiones determinarán si la plataforma logra construir la confianza necesaria para convertirse en un éxito global. Cada elección tiene consecuencias.",
+            "contextTitle": "Contexto del Caso",
+            "contextDescription": "<p>Estás en los inicios de Airbnb. La idea de alquilar una habitación a un desconocido es radical y la confianza es el activo más valioso y frágil. Cuentas con un presupuesto limitado y un equipo pequeño pero talentoso. Debes tomar decisiones críticas que equilibran el crecimiento rápido con la construcción de una plataforma sólida, segura y escalable.</p>",
+            "metrics": [
+                { "id": "confianzaUsuario", "label": "Confianza del Usuario" },
+                { "id": "eficienciaOperativa", "label": "Eficiencia Operativa" },
+                { "id": "escalabilidadFutura", "label": "Escalabilidad Futura" },
+                { "id": "alcanceMercado", "label": "Alcance de Mercado" }
+            ]
+        },
+        "initialState": {
+            "currentStep": 0,
+            "path": null,
+            "metrics": {
+                "confianzaUsuario": 60,
+                "eficienciaOperativa": 50,
+                "escalabilidadFutura": 50,
+                "alcanceMercado": 30
+            },
+            "decisionLog": []
+        },
+        "steps": [
+            {
+                "title": "Paso 1/10: Foco de Inversión Inicial",
+                "scenario": "Tienes el presupuesto inicial. Es limitado y debes decidir dónde enfocar el mayor esfuerzo para el lanzamiento.",
+                "options": [
+                    {
+                        "text": "Invertir en un diseño visual (Frontend) espectacular para atraer usuarios de inmediato.",
+                        "consequence": "La web es visualmente impresionante y atrae a los primeros usuarios, pero la base técnica es débil y cruje bajo la presión inicial, causando lentitud.",
+                        "effects": { "confianzaUsuario": 20, "eficienciaOperativa": -15, "escalabilidadFutura": -10, "alcanceMercado": 5 }
+                    },
+                    {
+                        "text": "Priorizar una arquitectura de backend robusta y segura, aunque la interfaz sea más simple.",
+                        "consequence": "El sitio es rápido y fiable, pero su diseño básico no inspira confianza inicial, haciendo que la captación de usuarios sea más lenta y difícil.",
+                        "effects": { "confianzaUsuario": -10, "eficienciaOperativa": 20, "escalabilidadFutura": 15, "alcanceMercado": -5 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 2/10: Estrategia de Diseño de Interfaz",
+                "scenario": "El equipo de desarrollo necesita una dirección clara sobre cómo debe ser la interfaz de usuario (UI/UX). El tiempo apremia.",
+                "options": [
+                    {
+                        "text": "Usar una plantilla de diseño genérica para lanzar lo antes posible y validar el modelo de negocio.",
+                        "consequence": "El lanzamiento es rápido, pero los usuarios se quejan de que la web es confusa y no genera confianza, resultando en una baja tasa de reservas.",
+                        "effects": { "confianzaUsuario": -25, "eficienciaOperativa": 5, "escalabilidadFutura": 0, "alcanceMercado": 0 }
+                    },
+                    {
+                        "text": "Invertir en investigar y diseñar un flujo de usuario (UX) simple e intuitivo, aunque retrase el lanzamiento.",
+                        "consequence": "El desarrollo se retrasa, pero la interfaz resultante es tan clara que las tasas de conversión son altísimas, generando confianza y validando el modelo con fuerza.",
+                        "effects": { "confianzaUsuario": 20, "eficienciaOperativa": -10, "escalabilidadFutura": 5, "alcanceMercado": 5 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 3/10: Decisión de Arquitectura Backend",
+                "scenario": "El equipo técnico debate sobre la arquitectura del sistema. Es una decisión fundamental que afectará al futuro de la plataforma.",
+                "options": [
+                    {
+                        "text": "Construir un sistema monolítico. Es más rápido de desarrollar al principio y más simple de gestionar para un equipo pequeño.",
+                        "consequence": "El equipo avanza a gran velocidad al inicio, pero a medida que el sistema crece, cada nuevo cambio se vuelve exponencialmente más lento y arriesgado.",
+                        "effects": { "confianzaUsuario": 0, "eficienciaOperativa": -10, "escalabilidadFutura": -30, "alcanceMercado": 0 }
+                    },
+                    {
+                        "text": "Diseñar una arquitectura de microservicios. Es más compleja al inicio pero facilitará el crecimiento y la escalabilidad a futuro.",
+                        "consequence": "El progreso inicial es dolorosamente lento, pero esta base permite que el sistema escale sin problemas y que equipos futuros trabajen en paralelo de forma eficiente.",
+                        "effects": { "confianzaUsuario": 5, "eficienciaOperativa": 15, "escalabilidadFutura": 30, "alcanceMercado": 5 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 4/10: Gestión de Crisis: Caída del Sistema",
+                "scenario": "La plataforma sufre su primera caída importante en un día de alto tráfico. Los usuarios no pueden hacer reservas. Hay pánico.",
+                "options": [
+                    {
+                        "text": "Aplicar un parche rápido para restaurar el servicio en minutos. Se investigará la causa raíz más tarde.",
+                        "consequence": "El servicio se restablece velozmente, calmando a los usuarios, pero el problema subyacente no se resuelve y causa caídas intermitentes, minando la confianza.",
+                        "effects": { "confianzaUsuario": -15, "eficienciaOperativa": -25, "escalabilidadFutura": -15, "alcanceMercado": -5 }
+                    },
+                    {
+                        "text": "Realizar un análisis de causa raíz completo, aunque signifique tener el sitio caído por más tiempo.",
+                        "consequence": "Los usuarios se enfurecen por la caída prolongada, pero la solución definitiva fortalece la plataforma y previene futuros fallos, aumentando la fiabilidad a largo plazo.",
+                        "effects": { "confianzaUsuario": 15, "eficienciaOperativa": 20, "escalabilidadFutura": 10, "alcanceMercado": 0 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 5/10: Petición de Funcionalidad: Accesibilidad",
+                "scenario": "Un grupo de defensa de los derechos de las personas con discapacidad pide que la plataforma sea accesible. Esto requeriría un rediseño de componentes clave.",
+                "options": [
+                    {
+                        "text": "Añadir la accesibilidad a la lista de 'tareas para el futuro' para no retrasar las funciones que generan ingresos.",
+                        "consequence": "Se ignoran las quejas de un segmento importante de usuarios, limitando el mercado potencial y generando una crisis de relaciones públicas por discriminación.",
+                        "effects": { "confianzaUsuario": -10, "eficienciaOperativa": 0, "escalabilidadFutura": 0, "alcanceMercado": -30 }
+                    },
+                    {
+                        "text": "Priorizar el trabajo y rediseñar los componentes para cumplir con los estándares de accesibilidad web.",
+                        "consequence": "El desarrollo de otras funciones se ralentiza, pero la plataforma gana acceso a un segmento de mercado más amplio y mejora su reputación como marca inclusiva y ética.",
+                        "effects": { "confianzaUsuario": 10, "eficienciaOperativa": -5, "escalabilidadFutura": 5, "alcanceMercado": 30 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 6/10: Pico de Crecimiento Inesperado",
+                "scenario": "Un artículo viral provoca un pico masivo de tráfico que ralentiza la plataforma hasta casi hacerla inutilizable. Es una oportunidad y un riesgo.",
+                "options": [
+                    {
+                        "text": "El equipo de operaciones (DevOps) añade servidores manualmente para soportar la carga. Es un proceso manual y estresante.",
+                        "consequence": "El equipo vive en constante 'modo bombero', los costos aumentan de forma descontrolada y la respuesta a los picos de tráfico es siempre lenta, perdiendo usuarios.",
+                        "effects": { "confianzaUsuario": -10, "eficienciaOperativa": -20, "escalabilidadFutura": -20, "alcanceMercado": -5 }
+                    },
+                    {
+                        "text": "Invertir en implementar un sistema de orquestación y auto-escalado (práctica DevOps) para manejar picos automáticamente.",
+                        "consequence": "La inversión inicial en tiempo y dinero es alta, pero la plataforma ahora maneja picos de tráfico masivos de forma automática y eficiente, preparada para un crecimiento global.",
+                        "effects": { "confianzaUsuario": 10, "eficienciaOperativa": 25, "escalabilidadFutura": 25, "alcanceMercado": 10 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 7/10: Alerta de Seguridad",
+                "scenario": "Un investigador de seguridad informa de una vulnerabilidad que podría exponer datos de los usuarios. No ha sido explotada... todavía.",
+                "options": [
+                    {
+                        "text": "Priorizar el desarrollo de nuevas funciones y dejar el parche de seguridad para el siguiente ciclo de desarrollo.",
+                        "consequence": "Un atacante explota la vulnerabilidad, filtrando datos de usuarios. La confianza en la plataforma se desploma y la prensa destruye la reputación de la empresa.",
+                        "effects": { "confianzaUsuario": -50, "eficienciaOperativa": -20, "escalabilidadFutura": -10, "alcanceMercado": -20 }
+                    },
+                    {
+                        "text": "Detener todo el desarrollo de nuevas funciones y asignar al equipo a solucionar la vulnerabilidad de inmediato.",
+                        "consequence": "El lanzamiento de la nueva función se retrasa, pero se previene una brecha de seguridad. La empresa publica un informe de transparencia que refuerza la confianza.",
+                        "effects": { "confianzaUsuario": 25, "eficienciaOperativa": 10, "escalabilidadFutura": 5, "alcanceMercado": 5 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 8/10: Pruebas de Nuevas Funciones",
+                "scenario": "El equipo de producto propone un nuevo flujo de reserva que podría aumentar la conversión. ¿Cómo se debería implementar?",
+                "options": [
+                    {
+                        "text": "Lanzar el nuevo flujo a todos los usuarios para obtener datos más rápido. Si falla, se revierte.",
+                        "consequence": "El nuevo flujo tiene un error crítico que confunde a los usuarios, provocando una caída masiva en las reservas y una avalancha de quejas en redes sociales.",
+                        "effects": { "confianzaUsuario": -20, "eficienciaOperativa": -15, "escalabilidadFutura": 0, "alcanceMercado": -10 }
+                    },
+                    {
+                        "text": "Implementar un framework de A/B testing y probar el flujo con un pequeño porcentaje de los usuarios primero.",
+                        "consequence": "El test revela el error con un impacto mínimo. Se corrige antes del lanzamiento global, salvando incontables reservas y demostrando un enfoque de producto maduro.",
+                        "effects": { "confianzaUsuario": 15, "eficienciaOperativa": 10, "escalabilidadFutura": 10, "alcanceMercado": 5 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 9/10: Expansión Internacional",
+                "scenario": "La plataforma tiene éxito y se planea la expansión a 5 nuevos países con diferentes idiomas y monedas. Se necesita una estrategia técnica.",
+                "options": [
+                    {
+                        "text": "Copiar y traducir el sitio para cada nuevo país. Es la forma más rápida de lanzar.",
+                        "consequence": "El lanzamiento es rápido, pero añadir un nuevo idioma o cambiar un texto simple requiere un esfuerzo de desarrollo titánico y propenso a errores. Es insostenible.",
+                        "effects": { "confianzaUsuario": 0, "eficienciaOperativa": -25, "escalabilidadFutura": -30, "alcanceMercado": 5 }
+                    },
+                    {
+                        "text": "Construir un sistema de internacionalización (i18n) que separe el contenido del código.",
+                        "consequence": "El desarrollo inicial es muy lento, pero después, añadir nuevos países e idiomas se convierte en una tarea administrativa sencilla, permitiendo una expansión global rapidísima.",
+                        "effects": { "confianzaUsuario": 5, "eficienciaOperativa": 20, "escalabilidadFutura": 25, "alcanceMercado": 15 }
+                    }
+                ]
+            },
+            {
+                "title": "Paso 10/10: Empuje Final Pre-Campaña",
+                "scenario": "Se aproxima una gran campaña de marketing. ¿En qué debe enfocarse el equipo de producto para el empuje final?",
+                "options": [
+                    {
+                        "text": "Añadir animaciones y una nueva función llamativa para impresionar a los nuevos usuarios que lleguen.",
+                        "consequence": "La nueva función tiene bugs y las animaciones hacen que la web sea lenta en dispositivos antiguos, generando una mala primera experiencia para muchos.",
+                        "effects": { "confianzaUsuario": -15, "eficienciaOperativa": -10, "escalabilidadFutura": 0, "alcanceMercado": -10 }
+                    },
+                    {
+                        "text": "Realizar una auditoría de rendimiento y accesibilidad completa, y solucionar todos los problemas encontrados.",
+                        "consequence": "La plataforma es sólida como una roca y usable por todos. La campaña resalta el compromiso social de la empresa, generando una fuerte lealtad de marca.",
+                        "effects": { "confianzaUsuario": 20, "eficienciaOperativa": 15, "escalabilidadFutura": 10, "alcanceMercado": 25 }
+                    }
+                ]
+            }
+        ]
+    };
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof gameData === 'undefined' || !gameData.meta) { document.body.innerHTML = '<h1>Error: Lógica del simulador no encontrada.</h1>'; return; }
+        let state = {};
+        const userCodeInputEl = document.getElementById('user-code-input');
+        const welcomeScreenEl = document.getElementById('welcome-screen');
+        const mainSimulationEl = document.getElementById('main-simulation');
+        const startBtn = document.getElementById('start-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const finalReportSectionEl = document.getElementById('final-report');
+        const continueBtn = document.getElementById('continue-btn');
+        startBtn.addEventListener('click', startGame);
+        downloadPdfBtn.addEventListener('click', generatePdf);
+        restartBtn.addEventListener('click', init);
+        continueBtn.addEventListener('click', proceedToNextStep);
+        function populateInitialContent() {
+             document.getElementById('main-title').textContent = gameData.meta.mainTitle;
+             document.getElementById('pdf-main-title').textContent = `Reporte: ${gameData.meta.mainTitle}`;
+             document.getElementById('main-subtitle').textContent = gameData.meta.mainSubtitle;
+             document.getElementById('welcome-title').textContent = gameData.meta.welcomeTitle;
+             document.getElementById('welcome-text').textContent = gameData.meta.welcomeText;
+             document.getElementById('context-title').textContent = gameData.meta.contextTitle;
+             document.getElementById('context-description').innerHTML = gameData.meta.contextDescription;
+             const metricsBar = document.getElementById('metrics-bar');
+             metricsBar.innerHTML = '';
+             gameData.meta.metrics.forEach(metric => {
+                 metricsBar.innerHTML += `<div class="metric"><div class="metric-label">${metric.label}</div><div class="metric-value" id="${metric.id}-val"></div><div class="progress-bar-container"><div id="${metric.id}-bar" class="progress-bar"></div></div></div>`;
+             });
+        }
+        function startGame() {
+            const userCode = userCodeInputEl.value.trim();
+            if (userCode === '') {
+                userCodeInputEl.classList.add('input-error');
+                userCodeInputEl.placeholder = '¡Este campo es obligatorio!';
+                setTimeout(() => userCodeInputEl.classList.remove('input-error'), 500);
+                return; 
+            }
+            state.userCode = userCode;
+            welcomeScreenEl.classList.add('hidden');
+            mainSimulationEl.classList.remove('hidden');
+            updateMetricsUI();
+            renderCurrentStep();
+        }
+        function init() {
+            state = JSON.parse(JSON.stringify(gameData.initialState));
+            userCodeInputEl.value = '';
+            userCodeInputEl.classList.remove('input-error');
+            userCodeInputEl.placeholder = 'Ingresa tu código de alumno aquí';
+            welcomeScreenEl.classList.remove('hidden');
+            mainSimulationEl.classList.add('hidden');
+            finalReportSectionEl.classList.add('hidden');
+            document.getElementById('scenario').classList.remove('hidden');
+            document.getElementById('decision-points').classList.remove('hidden');
+        }
+        function updateMetricsUI() {
+            gameData.meta.metrics.forEach(metric => {
+                const metricId = metric.id;
+                let value = state.metrics[metricId];
+                if (value < 0) value = 0; if (value > 100) value = 100;
+                state.metrics[metricId] = value;
+                const valEl = document.getElementById(`${metricId}-val`);
+                const barEl = document.getElementById(`${metricId}-bar`);
+                if(valEl && barEl) {
+                    valEl.textContent = value;
+                    barEl.style.width = `${value}%`;
+                    if (value < 40) barEl.style.backgroundColor = 'var(--error-color)';
+                    else if (value < 70) barEl.style.backgroundColor = 'var(--warning-color)';
+                    else barEl.style.backgroundColor = 'var(--growth-color)';
+                }
+            });
+        }
+        function renderCurrentStep() {
+            const scenarioTitleEl = document.getElementById('scenario-title');
+            const scenarioTextEl = document.getElementById('scenario-text');
+            const optionsContainerEl = document.getElementById('options-container');
+            const consequenceSectionEl = document.getElementById('consequence');
+            consequenceSectionEl.classList.add('hidden');
+            continueBtn.classList.add('hidden');
+            const stepNode = gameData.steps[state.currentStep];
+            let currentStepData;
+            if (stepNode.isBranchNode) { currentStepData = stepNode.paths[state.path]; } 
+            else { currentStepData = stepNode; }
+            if (!currentStepData) { return; }
+            document.getElementById('main-subtitle').textContent = `Paso ${state.currentStep + 1}/${gameData.steps.length} - ${gameData.meta.mainSubtitle}`;
+            scenarioTitleEl.textContent = currentStepData.title;
+            scenarioTextEl.textContent = currentStepData.scenario;
+            optionsContainerEl.innerHTML = '';
+            optionsContainerEl.querySelectorAll('.option-btn').forEach(btn => btn.disabled = false);
+            
+            // Aleatorizar el orden de las opciones para evitar patrones predecibles.
+            const shuffledOptions = [...currentStepData.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.innerHTML = option.text;
+                button.onclick = () => selectOption(option, currentStepData.title);
+                optionsContainerEl.appendChild(button);
+            });
+        }
+        function selectOption(option, stepTitle) {
+            const consequenceCardEl = document.getElementById('consequence-card');
+            const consequenceSectionEl = document.getElementById('consequence');
+            const optionsContainerEl = document.getElementById('options-container');
+            optionsContainerEl.querySelectorAll('.option-btn').forEach(btn => btn.disabled = true);
+            state.decisionLog.push({ step: state.currentStep + 1, title: stepTitle, choice: option.text, consequence: option.consequence });
+            for (const key in option.effects) { state.metrics[key] += option.effects[key]; }
+            if (state.currentStep === 0 && option.path) { state.path = option.path; }
+            updateMetricsUI();
+            consequenceCardEl.innerHTML = `<h4>Consecuencia</h4><p>${option.consequence}</p>`;
+            consequenceSectionEl.classList.remove('hidden');
+            continueBtn.classList.remove('hidden');
+        }
+        function proceedToNextStep() {
+            state.currentStep++;
+            if (state.currentStep < gameData.steps.length) {
+                renderCurrentStep();
+            } else {
+                showFinalReport();
+            }
+        }
+        function showFinalReport() {
+            document.getElementById('scenario').classList.add('hidden');
+            document.getElementById('decision-points').classList.add('hidden');
+            document.getElementById('consequence').classList.add('hidden');
+            document.getElementById('final-title').textContent = "Simulador Concluido";
+            document.getElementById('final-description').innerHTML = `<p>¡Felicidades, has concluido satisfactoriamente el simulador! Te pedimos que lo descargues en PDF y se lo entregues al profesor para que te dé una retroalimentación final personalizada.</p>`;
+            finalReportSectionEl.classList.remove('hidden');
+        }
+        function generatePdf() {
+            const { jsPDF } = window.jspdf;
+            const reportElement = document.getElementById('pdf-report');
+            const downloadButton = document.getElementById('download-pdf-btn');
+            downloadButton.textContent = 'Generando PDF...';
+            downloadButton.disabled = true;
+            document.getElementById('pdf-user-code').textContent = state.userCode || 'No ingresado';
+            document.getElementById('pdf-final-title').textContent = document.getElementById('final-title').textContent;
+            document.getElementById('pdf-final-description').innerHTML = document.getElementById('final-description').innerHTML;
+            const pdfMetricsContainer = document.getElementById('pdf-metrics-container');
+            pdfMetricsContainer.innerHTML = '';
+            gameData.meta.metrics.forEach((metric, index) => {
+                pdfMetricsContainer.innerHTML += `<strong>${metric.label}:</strong> ${state.metrics[metric.id]}/100 ${index < gameData.meta.metrics.length - 1 ? '| ' : ''}`;
+            });
+            const logContainer = document.getElementById('pdf-decision-log');
+            logContainer.innerHTML = '';
+            state.decisionLog.forEach(log => {
+                const item = document.createElement('li');
+                item.innerHTML = `<h3>${log.title.replace(/Paso \d+\/10: /, '')}</h3><p><strong>Decisión Tomada:</strong> ${log.choice}</p><p><strong>Consecuencia:</strong> ${log.consequence}</p>`;
+                logContainer.appendChild(item);
+            });
+            reportElement.style.display = 'block';
+            reportElement.style.position = 'absolute';
+            reportElement.style.left = '-9999px';
+            reportElement.style.top = '0';
+            html2canvas(reportElement, { scale: 2, useCORS: true }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                window.open(pdf.output('bloburl'), '_blank');
+                reportElement.style.display = 'none';
+                downloadButton.textContent = 'Descargar Reporte en PDF';
+                downloadButton.disabled = false;
+            }).catch(err => {
+                console.error("Error al generar el PDF:", err);
+                downloadButton.textContent = 'Error al generar PDF';
+            });
+        }
+        populateInitialContent();
+        init();
+    });
+    </script>
+</body>
+</html>
+
